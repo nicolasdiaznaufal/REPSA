@@ -1,0 +1,6 @@
+duckdb
+pandas
+streamlit==1.38.0
+plotly
+pydeck
+openpyxl

@@ -1,0 +1,24 @@
+# Datos: viven en GitHub Releases, no en git (ver README > Despliegue)
+db/
+*.duckdb
+
+# CSV crudos de CENACE (pesan mucho, no hace falta versionarlos)
+*.csv
+CSV/
+
+# Catálogo de nodos (xlsx, se puede volver a descargar de CENACE)
+*.xlsx
+
+# Entorno de Python
+.venv/
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Sistema
+.DS_Store
