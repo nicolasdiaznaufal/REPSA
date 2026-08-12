@@ -1,24 +1,82 @@
 """
 Interfaz de análisis histórico de PML (CENACE).
 
-Uso:
+Uso local:
     streamlit run app.py
 
-Para compartir con colegas en la oficina, correr en un servidor/VM interno:
-    streamlit run app.py --server.address 0.0.0.0 --server.port 8501
-Luego cada quien entra desde su navegador a http://<ip-del-servidor>:8501
+Despliegue en Streamlit Community Cloud:
+    La base de datos (db/pml.duckdb) NO vive en este repositorio de git —
+    se descarga automáticamente al arrancar desde un GitHub Release.
+    Ver README.md > "Despliegue" para la configuración completa.
 """
 import os
+import io
 import duckdb
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
+import requests
 import streamlit as st
 
-DB_PATH = os.path.join(os.path.dirname(__file__), ".", "db", "pml.duckdb")
+# --- Configuración de descarga de la base de datos ---
+# Ajusta estos tres valores a tu repositorio y release reales.
+GITHUB_REPO = "nicolasdiaznaufal/REPSA"       # formato: "usuario/nombre-repo"
+RELEASE_TAG = "db"             # el tag del release que contiene el .duckdb
+ASSET_NAME = "pml.duckdb"                  # nombre del archivo adjunto en el release
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "db", "pml.duckdb")
 
 st.set_page_config(page_title="PML Histórico", layout="wide")
+
+
+def asegurar_base_datos():
+    """Descarga pml.duckdb desde un GitHub Release si no existe localmente.
+
+    Funciona con repos públicos y privados:
+    - Público: descarga directa, sin autenticación.
+    - Privado: requiere un token en st.secrets['github_token'] (Personal
+      Access Token, permiso mínimo 'Contents: Read-only' sobre el repo).
+      En Streamlit Community Cloud esto se configura en
+      App settings > Secrets, no se sube a git.
+    """
+    if os.path.exists(DB_PATH):
+        return  # ya está descargada (uso local, o ya se descargó en esta sesión del contenedor)
+
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+    token = st.secrets.get("github_token", None) if hasattr(st, "secrets") else None
+
+    with st.spinner("Descargando base de datos más reciente..."):
+        if token:
+            # Repo privado: hay que resolver el asset por la API y pedirlo con
+            # Accept: application/octet-stream para obtener el binario, no el JSON.
+            api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/tags/{RELEASE_TAG}"
+            headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+            r = requests.get(api_url, headers=headers, timeout=30)
+            r.raise_for_status()
+            release = r.json()
+            asset = next((a for a in release["assets"] if a["name"] == ASSET_NAME), None)
+            if asset is None:
+                st.error(f"No se encontró el archivo '{ASSET_NAME}' en el release '{RELEASE_TAG}'.")
+                st.stop()
+
+            headers_download = {"Authorization": f"token {token}", "Accept": "application/octet-stream"}
+            r2 = requests.get(asset["url"], headers=headers_download, timeout=120, stream=True)
+            r2.raise_for_status()
+            contenido = r2.content
+        else:
+            # Repo público: URL directa de descarga del release
+            url = f"https://github.com/{GITHUB_REPO}/releases/download/{RELEASE_TAG}/{ASSET_NAME}"
+            r = requests.get(url, timeout=120, stream=True)
+            r.raise_for_status()
+            contenido = r.content
+
+        with open(DB_PATH, "wb") as f:
+            f.write(contenido)
+
+
+asegurar_base_datos()
 
 
 @st.cache_resource
@@ -52,7 +110,7 @@ nodos_disponibles = cargar_nodos()
 anios_disponibles = cargar_anios()
 fecha_min, fecha_max = rango_fechas()
 
-st.caption(f"Base de datos: {len(nodos_disponibles):,} nodos ; datos del {fecha_min} al {fecha_max}")
+st.caption(f"Base de datos: {len(nodos_disponibles):,} nodos · datos del {fecha_min} al {fecha_max}")
 
 st.sidebar.header("Filtros")
 nodos_sel = st.sidebar.multiselect(

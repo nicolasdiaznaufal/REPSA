@@ -12,7 +12,7 @@
 #
 set -e
 
-REPO="tu-usuario/pml-repsa"       # <-- ajusta a tu repo real
+REPO="nicolasdiaznaufal/REPSA"       # <-- ajusta a tu repo real
 TAG="datos-actuales"
 ARCHIVO="db/pml.duckdb"
 
