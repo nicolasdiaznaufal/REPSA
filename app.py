@@ -22,7 +22,7 @@ import streamlit as st
 # --- Configuración de descarga de la base de datos ---
 # Ajusta estos tres valores a tu repositorio y release reales.
 GITHUB_REPO = "nicolasdiaznaufal/REPSA"       # formato: "usuario/nombre-repo"
-RELEASE_TAG = "db"             # el tag del release que contiene el .duckdb
+RELEASE_TAG = "datos-actuales"             # el tag del release que contiene el .duckdb
 ASSET_NAME = "pml.duckdb"                  # nombre del archivo adjunto en el release
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "db", "pml.duckdb")
